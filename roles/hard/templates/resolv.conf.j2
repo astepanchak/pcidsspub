@@ -1,0 +1,8 @@
+# ansible_managed
+{% if hard_nameservers is defined %}
+search {{ base_domain }}
+options timeout:1 attempts:1
+{% for item in hard_nameservers %}
+nameserver {{ item }}
+{% endfor %}
+{% endif %}

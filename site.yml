@@ -1,0 +1,23 @@
+
+- hosts: all
+  roles:
+    - { role: hosts                 , tags: hosts                 }
+    - { role: hard                  , tags: hard                  }
+#    - { role: iptables              , tags: iptables    }
+
+- hosts: man
+  roles:
+#    - { role: docker           , tags: docker          }
+    - { role: chrony-client    , tags: chrony-client    }
+
+- hosts: hman-1
+  roles:
+#    - { role: ldap             , tags: ldap            }
+
+- hosts: hman-2
+  roles:
+#    - { role: ldap-replica     , tags: ldap-replica    }
+
+- hosts: adm
+  roles:
+    - { role: chrony-client    , tags: chrony-client    }

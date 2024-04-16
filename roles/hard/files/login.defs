@@ -1,0 +1,21 @@
+# Maximum number of days a password is valid
+PASS_MAX_DAYS   90
+
+# Number of days when the password change reminder starts
+PASS_WARN_AGE   7
+
+# Passwords may only be changed once a day
+PASS_MIN_DAYS   1
+
+# This parameter does not work. It is superseded by the PAM module "pam_cracklib"
+PASS_MIN_LEN    8
+
+ENCRYPT_METHOD SHA512
+MAIL_DIR        /var/spool/mail
+UID_MIN                  1000
+UID_MAX                 60000
+GID_MIN                  1000
+GID_MAX                 60000
+CREATE_HOME     yes
+UMASK           077
+USERGROUPS_ENAB yes

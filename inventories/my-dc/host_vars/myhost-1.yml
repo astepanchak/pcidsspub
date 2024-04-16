@@ -1,0 +1,9 @@
+home_size: 50G
+tmp_size: 10G
+var_tmp_size: 10G
+root_device: /dev/mapper/alma-root
+db_host: false
+nginx_host: false
+firewall_host: false
+log_host: false
+ip_forward: false

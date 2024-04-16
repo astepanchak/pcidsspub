@@ -1,0 +1,31 @@
+# The user and group nslcd should run as.
+
+nss_initgroups_ignoreusers ALLLOCAL
+
+uid nslcd
+gid ldap
+
+bind_timelimit 2
+timelimit 2
+idle_timelimit 60
+reconnect_retrytime 2
+
+uri ldaps://ldap-1.hdc1net/ ldaps://ldap-2.hdc1net/
+
+base dc={{ base_domain }}
+
+binddn cn=pam,ou=apps,dc={{ base_domain }}
+bindpw Lbhg_GzGfwbbJdLX_A6KjXKTD7DM4Xz27gnq3Afst8UZI_B1hXB3Y_oMYBwKs_05
+
+base group ou=groups,dc={{ base_domain }}
+base passwd ou=people,dc={{ base_domain }}
+base shadow ou=people,dc={{ base_domain }}
+
+
+# Use StartTLS without verifying the server certificate.
+#ssl start_tls
+tls_reqcert never
+tls_cacertfile /etc/openldap/cacerts/ca-{{ base_domain }}.crt
+
+ssl no
+pam_authz_search (&(objectClass=posixAccount)(uid=$username)(|(host=$hostname)(host=$fqdn)(host=\\*)))

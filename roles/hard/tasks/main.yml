@@ -1,0 +1,204 @@
+---
+
+# task main.yml file for hard
+
+- name: rename host
+  hostname: name={{inventory_hostname}}
+  tags: hostname
+
+- name: set timezone UTC
+  timezone:
+    name: UTC
+  tags: timezone
+
+- name: copy resolv.conf
+  template: dest=/etc/resolv.conf src=resolv.conf.j2 owner=root group=root
+
+- name: copy ssh banner
+  copy: dest=/etc/ssh/sshd-banner src=sshd-banner owner=root group=root
+
+- selinux: state=disabled
+  tags:
+    - selinux
+
+- name: Copy pgp key repository
+  copy: src="{{ item }}" dest=/etc/pki/rpm-gpg/{{ item }}  mode=0644
+  with_items:
+    - RPM-GPG-KEY-EPEL-9
+
+- name: Import epel GPG key
+  rpm_key: key=/etc/pki/rpm-gpg/{{ item }} state=present
+  with_items:
+    - RPM-GPG-KEY-EPEL-9
+
+- name: remove all repositoryes
+  raw: rm -Rf /etc/yum.repos.d/*.repo
+
+- name: Set appstream repo
+  template: src=almalinux-appstream.repo.j2 dest=/etc/yum.repos.d/almalinux-appstream.repo  mode=0644
+
+- name: Set baseos repo
+  template: src=almalinux-baseos.repo.j2 dest=/etc/yum.repos.d/almalinux-baseos.repo  mode=0644
+
+- name: Set extras repo
+  template: src=almalinux-extras.repo.j2 dest=/etc/yum.repos.d/almalinux-extras.repo  mode=0644
+
+- name: Set epel repo
+  template: src=epel.repo.j2 dest=/etc/yum.repos.d/epel.repo mode=0644
+
+- name: Install utils
+  dnf: name="epel-release,wget,mc,screen,net-tools,nss-pam-ldapd,htop,patch,psmisc,yum-utils,tar,zip,unzip,gzip,initscripts" state=present
+
+- name: Disable unneded services
+  ignore_errors: yes
+  service:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items:
+    - auditd.service
+    - firewalld.service
+    - kdump.service
+    - selinux-autorelabel-mark.service
+    - remote-fs.target
+    - sssd.service
+    - dnf-makecache.timer
+
+- name: pwquality settings
+  copy: src=pwquality.conf dest=/etc/security/pwquality.conf mode=0644
+
+- name: login settings
+  copy: src=login.defs dest=/etc/login.defs mode=0644
+
+- name: pam auth
+  file: src=/etc/pam.d/system-auth dest=/etc/pam.d/password-auth state=link force=yes
+
+- name: pam auth
+  copy: src=system-auth dest=/etc/pam.d/system-auth mode=0644
+
+- name: read timeout
+  copy:
+    content: "readonly TMOUT=900\nreadonly HISTFILE\nexport TMOUT\n"
+    dest: /etc/profile.d/os-security.sh
+    owner: root
+    group: root
+    mode: 0755
+
+- name: sysctl-settings
+  template: src=sysctl.conf.j2 dest=/etc/sysctl.conf mode=0644
+
+- name: remove unneded programs
+  ignore_errors: yes
+  dnf:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+    - xinetd
+    - telnet-server
+    - xorg-x11*
+    - rsh-server
+    - telnet
+    - rsh-server
+    - rsh
+    - ypbind
+    - ypserv
+    - tftp-server
+    - vsftpd
+    - net-snmp
+    - postfix
+    - avahi
+    - cups
+    - dhcp-server
+    - bind
+    - dnsmasq
+    - nfs-utils
+    - rpcbind
+    - rsync-daemon
+    - tftp
+    - ftp
+
+- name: sudoers
+  copy: src=sudoers dest=/etc/sudoers owner=root group=root mode=0440
+
+- name: hard sshd
+  copy: src=sshd_config dest=/etc/ssh/sshd_config owner=root group=root mode=0600
+
+- name: install snoopy
+  dnf: name=snoopy state=latest
+
+- name: snoopy conf
+  copy:
+    content: "[snoopy]\nfilter_chain = \"only_tty\"\n"
+    dest: /etc/snoopy.ini
+    owner: root
+    group: root
+    mode: 0644
+
+- name: enable snoopy
+  raw: /usr/sbin/snoopy-enable
+
+- name: Install iptables-services
+  dnf: name="iptables-services"
+  register: iptables_install
+
+- name: autostart iptables
+  service:
+    name: iptables
+    enabled: yes
+
+- name: iptables default
+  copy: src=iptables dest=/etc/sysconfig/iptables owner=root group=root mode=0600
+
+- name: Install Openldap-clients
+  dnf: name=openldap-clients state=present
+
+- name: Copy nslcd.conf
+  template: dest=/etc/nslcd.conf src=nslcd.conf.j2 owner=root group=root
+
+- name: create folder for ldap cert
+  file: path=/etc/openldap/cacerts state=directory mode=0755
+
+- name: Copy certificate
+  copy: dest=/etc/openldap/cacerts/ca-hdc-1.crt src=ca-hdc-1.crt owner=root group=root mode=0644
+
+- name: Copy nsswitch.conf
+  copy: dest=/etc/nsswitch.conf src=nsswitch.conf owner=root group=root
+
+- name: autostart nslcd
+  service:
+    name: nslcd
+    state: stopped
+    enabled: yes
+
+- name: upgrade all packages
+  dnf: name=* state=latest
+
+- name: /dev/shm hardening
+  mount: src=tmpfs name=/dev/shm fstype=tmpfs opts="nodev,nosuid,noexec" state=present
+
+- name: disable unused filesystems and protocols
+  copy: src=CIS.conf dest=/etc/modprobe.d/CIS.conf owner=root group=root mode=0644
+
+- name: permission grub
+  file: path=/boot/grub2/grub.cfg owner=root group=root mode=0600
+
+- name: permission grub
+  file: path=/boot/grub2/grubenv owner=root group=root mode=0600
+
+- name: Ensure core dumps are restricted
+  raw: echo "* hard core 0" >> /etc/security/limits.conf
+
+- name: files permissions
+  raw: chmod og-rwx /etc/crontab /etc/cron.hourly /etc/cron.daily /etc/cron.weekly /etc/cron.monthly /etc/cron.d
+
+- name: Set umask in /etc/bashrc
+  raw: echo "umask 077" >> /etc/bashrc
+
+- name: Set umask in /etc/profile
+  raw: echo "umask 077" >> /etc/profile
+
+- name: disable coredump storage
+  raw: echo "Storage=none" >> /etc/systemd/coredump.conf
+
+- name: disable coredump backtraces
+  raw: echo "ProcessSizeMax=0" >> /etc/systemd/coredump.conf

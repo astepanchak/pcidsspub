@@ -1,0 +1,4 @@
+tmp_size: 2g
+var_tmp_size: 2g
+home_size: 2g
+root_device: /dev/mapper/centos-root
